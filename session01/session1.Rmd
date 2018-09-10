@@ -1,10 +1,12 @@
 ---
-title: "Session #1: A Conceptual Overview to Data Science"
-output: 
+title: 'Session #1: A Conceptual Overview to Data Science'
+date: 'September 11, 2018'
+output:
+  slidy_presentation:
+    highlight: pygments
   ioslides_presentation:
     self_contained: no
     widescreen: yes
-
 ---
 
 <style>
@@ -24,14 +26,23 @@ output:
   h2 {
     font-size: 2em;
   }
+  h1 {
+    color: darkslategrey;
+  }
+  h3 {
+    color: darkorange;
+  }
   
+  strong {
+    color: blue;
+  }
+  i {
+    color: orange;
+  }
 </style>
 
-## Today's main takeaway
 
-[]
-
-## Roadmap
+#  Roadmap
 
 __Part 1: A Conceptual Overview__
 
@@ -48,67 +59,113 @@ __Part 2: Programming Refresher__
 - Review of R
 - Dissecting a pipeline
 
-## Applications: Rec Engines
+
+
+#  Applications: Rec Engines
 
 Amazon's recommendation engines examine past purchase behavior to personalize and surface products to relevant consumers.
 
 ![](img/rec_engines.png)
 
-## Applications: Satellite imagery  
+#  Applications: Satellite imagery  
 
 Orbital Insights deploys computer vision algorithms to count cars at retail store parking lots in order for investors to better approximate quarterly earnings.
 
 ![](img/retail-header.jpg)
 
-## Applications: Email receipts
+#  Applications: Email receipts
 
-Quandl used a panel of email receipts to predict the effects of an Uber platform charge policy.
+Quandl used a panel of email receipts to predict the effects of an Uber platform charge policy. 
 
 ![](img/UberQuarterly.jpg)
 
-## Applications: Pricing
+
+#  Applications: Pricing
 
 Zillow collected most of the housing sales data in the US and constructed a price prediction model to help sellers price their homes more competitively when they choose to put the property on the market.
 
 ![](img/zillow.png)
 
+#  Applications: Fire Prediction
 
-## Applications: Anomaly Detection
+FDNY among other city fire departments around train algorithms to predict where fires will in order to target fire safety inspections.
+
+![](img/fdny.jpeg)
+
+#  Applications: Anomaly Detection
 
 Advanced time series modeling can be used to detect anomalous activity so that online platforms can safeguard their assets.
 
 ![](img/anomaly.png)
 
 
-## Detect the pattern!
+#  What's the pattern!
 
-__What do these examples have in common?__
+All of these examples have a common structure. 
+
 __What is the underlying structure?__
 
 
-## Detect the pattern!
+#  Detect the pattern!
 
-- Implies there is an end user
-- The end user has a problem
-- Data is collected
-- A model is used to power the solution 
-- The result is scalable or automated
+- Implies there is an __end user__
+- The end user has a __problem__
+- __Data__ is available
+- A __model__ is used to power the solution 
+- The result is __scalable__ and, if necessary, __automated__.
 
 
-## What is it?
-- What does data science entail? 
+#  Applications: BEA
 
-Data science is the confluence of statistical inference, computer science, engineering and subject matter expertise. 
+### What are some good uses of this paradigm at __BEA__? 
 
-Focused on engineering reliable systems and processes that automate replicable and stable science 
+###*[Your Ideas Go Here]*
 
-Allows data to take a more active and precise role in operations, rather than requiring human judgment screen each and every step of a task, but allows well-calibrated and designed algorithms to learn patterns in order to make good predictions
+#  Applications: BEA
 
-It is also important to note that data science is a marketing term
+### What are some good uses of this paradigm at __BEA__? 
 
-### How is it different from economics? How isn’t it different?
+- Advanced algorithms for constructing synthetic source data from more timely data in order to reduce revisions
+- Anomaly detection applied to source data to flag for analyst quality control review 
+- Automated model-based imputation that reduces need for manual adjustments
+- News correlation engine to help tell the story behind movements in the data
 
-__Similarities__. 
+#  What is it we're talking about? 
+
+Data science has a rather fluffy definition as it is interdisciplinary field. But generally, there is agreement that *data science* sits at the intersection of mathematical inference, computer science and subject matter expertise. 
+
+![Venn diagram by Drew Conway](img/conway.png)
+
+
+#  How is data science different from other fields?
+
+Data science uses statistical inference and computational algorithms to develop applications that communicate an actionable insight.
+
+$$\text{Data Science} = f(\text{Statistics, Computer Science})$$
+
+Modern statisticians will claim that data science is no different, but they tend not to operationalize insight. Computer scientists have long developed applications, but are not interested in inference.
+
+$$\text{Statistics} \neq \text{Computer Science} $$
+
+Data science is not social science as it does not rely on formal social theories, but rather starts from the first principles of inference from data.
+
+$$\text{Data Science} \neq \text{Social Science} $$
+
+
+#  What is data science good for? Where does it fall short?
+
+| |Yea|Nay|
+|-----------------+----------------------+--------------------|
+|Adoption | Embraced mostly in fields where there is a rapid expansion of data and theory has not yet formed | Data science tends to clash with well-established fields. | 
+|Interpretation | Underlying skills can be flexibly applied | There isn't a gold standard for how it should be applied. |
+|Staffing need | Very few people required to do the job well | Fluffy definition means little quality control of who is a data scientist | 
+|Long term outlook| Skills will likely persist into the future | Whereas early days of data science focused on generalist practitioners, future practitioners will be field specific -- re-adsorbed into host field.| 
+
+
+
+#  Data Science vs. Economics vs. National Accounts
+
+- Economics and National Economic Accounting are well-established fields with standardized toolsets.
 
 __Differences__.
 1. Data science is not concerned with causality. But most of econ isn't either with the exception of what's known as identification problems. In some fields, causality is determined if parameters are placed on the right hand side of the equation in order to infer partial correlations.
@@ -118,8 +175,7 @@ __Differences__.
 - Example: Data analysis on e-commerce sales could indicate that Nintendo Switch out sold XBoxes. A data science project figures out who should Nintendo and Microsoft products be targeted to, their price point, and at what time of the day.
 
 
-
-### Why economists make for good data scientists?
+#  Why economists make for good data scientists?
 Data science has been hyped to be the panacea for business and policy. But in the end, it's just a different brand of statistics that has direct applications for end users. The technologies are getting easier to use, requiring only a fraction of the training that experts did decades ago.
 
 What's left is asking good questions. That best data scientists are those who can find a problem, break it apart, then figure out what can data do to solve it as well as know when data is useless.
@@ -128,27 +184,162 @@ Economists are good at asking questions.
 
 
 
+# Why is data science good for BEA?
 
-Not different
->> Buzz terms
->> 
+- operations enah
 
-## How data science fit into the economics and national accounting?
+#  What makes for a good application? 
 
-- What is it good for? Where does it fall short?
+Applications tend take on one of three forms:
 
-##What are the issues that have yet to be reconciled between theory-based and data-driven approaches?
+![](img/spectrum.jpg)
 
-##How are data science projects typically structured?
+- __Benchmarks__ provide context (e.g. performance dashboards)
+- __Explanations__ describe how phenomena behave (e.g. Visualizations showing precisely what is the impact of droughts on agricultural output)
+- __Predictions__ anticipate what will happen to inform what you should do (e.g. Redfin housing sales price predictions that help set)
 
-1. Use Case Statement
+In other words, what we do with the data needds to have a point.
 
-Defining 
+#  What is the difference between theory-driven and data-driven approaches?
 
-2. Acquisition
-3. Engineering
-4. Learning
-5. Deployment
+Story-driven
+
+- Models are constructed following a formal theory
+- Objective tends to describe phenomena, but model accuracy tends not to be a primary consideration
+
+Data driven assumes that we rely on math to uncover relationships
+
+- Assume that the data that are considered are relevant, but models have properties that can surface relationships
+- More focused on prediction
+
+#  Example: Story-Driven vs. Data-Driven
+
+- Story-Driven: story about regression that has significant coefficients but very low R-squared, coefficients then tell a story.
+- Data-Driven: story about prediction that has very high accuracy, but model is not linearly interpretable and thus story is not clear
+
+#  So so so many buzzwords
+
+Data science is also a marketing term and part of a larger universe of buzzwords: 
+
+- __Big Data__
+- __Data analytics__
+- __Machine Learning__
+- __Artificial Intelligence__
+- __Data engineering__
+- __Deep learning__
+
+#  So so so many buzzwords
+
+Data science is also a marketing term and part of a larger universe of buzzwords: 
+
+- __Big Data__: Data that tends to be available at a high frequency (velocity) with a large quantity (volume), and capturing a broad set of information (variety)
+- __Data analytics__: Process of analyzing and surfacing insights from data.
+- __Machine Learning__: Statistical techniques that allow computers to learn patterns.
+- __Artificial Intelligence__: See above, but applied to solving human tasks.
+- __Deep learning__: A branch of machine learning concepts and representations rather than tasks.
+- __Data engineering__: Process of engineering software solutions and pipelines for data.
 
 
-##Case: How does this fit in BEA? – the QSS prediction project
+#  What is data science entail? 
+
+Focused on engineering reliable systems and processes that automate replicable and stable science 
+
+Allows data to take a more active and precise role in operations, rather than requiring human judgment screen each and every step of a task, but allows well-calibrated and designed algorithms to learn patterns in order to make good predictions
+
+
+
+#  How are data science projects typically structured?
+
+```{r, echo = FALSE}
+library(DiagrammeR)
+mermaid("graph LR
+        A[Use Case Statement] --> B[Data Acquisition]
+        B --> C[Data Engineering]
+        C --> D[Modeling]
+        D --> A
+        D --> E[Deployment]
+        E --> D",
+        height = 300)
+
+```
+
+Note: Different companies will have a different ways of describing this process -- it's largely for marketing purposes, but is effectively the same.
+
+
+
+#  (1) Use Case Statement
+
+Set the initial starting parameters by answering these questions
+
+- __What discretely defined problem exists?__
+- __Who specifically does the problem effect? __
+- __Under what conditions does the problem exist?__
+- __Which aspects of the problem lend itself to data solutions?__
+- __What can be engineered to improve the situation? __
+- __What are the success criteria?__
+
+#  (1) Use Case Statement: Example
+
+- __What discretely defined problem exists?__ _NEA would like to reduce revisions where possible_.
+- __Who specifically does the problem effect?__ _PCE branch sits on top 70% of the GDP -- start there_.
+- __Under what conditions does the problem exist?__ _Advance estimates are produced prior to receiving Census data_.
+- __Which aspects of the problem lend itself to data solutions?__Replacing extrapolation techniques using contemporaneous data_.
+- __What can be engineered to improve the situation?__ _A forecast system that evaluates all available information in a timely manner in order to produce synthetic source data _.
+- __What are the success criteria?__ _Resulting predictions must be closer to the 3rd estimate than current method. _
+
+
+#  (2) Data Acquisition
+
+
+#  (2) Data Acquisition: Example
+
+#  (3) Data Engineering
+
+
+#  (3) Data Engineering: Example
+
+#  (4) Modeling
+
+#  (4) Modeling: Example
+
+#  (5) Deployment
+
+#  (5) Deployment: Example
+
+# Not Rube Goldberg
+
+This sounds too complicated for everyday use.
+
+The beauty of modern technology and techniques is that it can turn tedium into something that is surefire. The goal is to engineer a machine that produces artisan-quality results at the click of a button.
+
+![](img/rube.jpg)
+
+# rubeGoldberg()
+
+Most data production companies in private sector like Bloomberg tend to be vertically integrated so that economic research products are
+
+- co-developed with engineering and economists
+- overseen by a product team that understands how data products will be used by customers. 
+
+Everyone tends to know the same code base (e.g. "We are a Python shop")
+
+```{r, echo = FALSE}
+library(DiagrammeR)
+mermaid("graph LR
+        A[Product] --> B[Research]
+        A --> C[Engineering]
+        C --> A
+        B --> C
+        C --> B
+        A[Product] --> D[Marketing]",
+        height = 300)
+
+```
+
+
+
+# Part II: Code Refresher
+
+Data science generally relies on one of two coding languages: __R__ and __Python__.
+
+Today, we will have a quick refresh of R and walk through two basic scripts that represent how a basic data science project could work.
