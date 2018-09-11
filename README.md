@@ -1,2 +1,7 @@
-# bea-data-workshops
-Data science orkshop series with BEA analysts
+# Data Workshops
+Notes for data science workshop series with economic analysts
+
+Sessions
+1. Conceptual Overview to Data Science
+2. Model Training and Validation
+3. Deployment
