@@ -23,8 +23,9 @@
     source("https://raw.githubusercontent.com/SigmaMonstR/weather-series/master/code/stateWeather.R")
   
   #Specify what state we're going to work with 
-    loc.abbrev <- "FL"
     loc.name <- "Florida"
+    loc.abbrev <- state.abb[which(state.name == loc.name)]
+    
 
 
 #(2) GET DATA ----------------
@@ -73,9 +74,9 @@
 
   #Split sample for training and testing
     train <- subset(series, end = 250)
-    test <- subset(series, start =251)
+    test <- subset(series, start = 251)
 
-  #Estimate a simple seasonal ARIMA(0,1,1) on training sample
+  #Estimate a simple seasonal ARIMA on training sample using auto model
   #that includes one regressor: 'cdd' or cooling degree days
   fit <- auto.arima(y = train[,1], 
                xreg = train[,3],
@@ -95,6 +96,8 @@
   #Clean up result outputs
     output <- as.data.frame(output)
     output <- cbind(period = pd, output)
+    
+  #Create new columns that are empty
     output$yhat <- output$pdy <- output$pdyhat <- NA
     
   #Fill in results
