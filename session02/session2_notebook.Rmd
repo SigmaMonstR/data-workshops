@@ -1,0 +1,362 @@
+---
+title: 'Session 2: Model Validation and Prediction'
+output: html_notebook
+---
+
+### Introduction
+
+Today's session is focused on the prediction process. It's really easy to make a prediction. It's really hard to get it right. 
+
+![](img/xkcd-loss.png)
+
+By the end of today's session, we will have covered:
+
+- What steps you can take to make sure you have a good prediction through *model validation*
+- How to balance interpretability with accuracy
+- What are the different prediction methods that you can use
+
+### Setting up the data
+
+We'll borrow some basic data from the Quarterly Services Survey and see if we can predict services sector growth. Before we start, let's load in the data, which is a long-form data set of quarterly growths:
+
+- *growth*: Growth by industry from the Census Quarterly Services Survey
+- *ces*: by employment level by industry from the BLS Current Employment Survey 
+- *google*: search query volume from Google Trends
+- *cpi*: by consumer price index
+
+The version of the data we're using is all publicly available, scraped from web sources. In total, the data contains $n = 55$, which covers the great recession, with $k = 793$ variables for 20 industries. There are three other data frames available in this data set, but we just need to worry about *qss_main*.
+
+```{r, warning=FALSE, message = FALSE}
+#LOAD DATA
+  load("example.Rda")
+  dim(qss_main)
+```
+
+For now let's just focus on one industry: *NAICS 511 - Publishing Industries (except internet)*. We can subset the industry by using row index notation.
+```{r, warning=FALSE, message = FALSE}
+#SET UP DATA
+  short <- qss_main[qss_main$naics == "511",]
+```
+
+For some context, we'll create a vector that flags when the recession took place.
+
+```{r, warning=FALSE, message = FALSE}
+
+#Create vector
+  recession <- rep(0, nrow(short))
+  recession[short$period %in% c("2007-Q4", "2008-Q1", "2008-Q2",
+                                "2008-Q3", "2008-Q4",
+                                "2009-Q1", "2009-Q2")] <- 1
+  
+#Define the dimensions of a box to highlight recession in a graph
+  xleft <- which(recession == 1)[1]
+  xright <- which(recession == 1)
+  xright <- max(xright)
+  ytop = max(short$growth) + 1
+  ybottom = min(short$growth) - 11
+  
+```
+
+Then, plot the data to show that they are seasonal and dip during the recession.
+
+```{r}
+
+  plot(short$growth, type = "l", ylab = "growth", col = "orange")
+  points(short$growth, col = "orange", pch = 16)
+  rect(xleft, ybottom, xright, ytop, 
+       col = rgb(1,1,0,0.3),
+       border = FALSE)
+  
+```
+
+### Refresher 
+
+Prediction relies on the idea of *supervised learning*. Basically:
+
+$$y = f(x)$$
+
+indicates that we have some set of input variables $x$ that are mapped using some function $f$ to mimic a target variable $y$. It is called supervised as an algorithm has a specific goal or target to meet, doing so by learning the pattern between $y$ and $x$. The algorithm can take any data in the same structure and format as $x$, then produce a prediction $\hat{y}$. Prediction and forecasting are thus the same thing -- an algorithm learns the patterns then applies it.
+
+
+### Types of models
+
+The function $f$ can take on a number of forms, but today we'll cover two principal types: 
+
+- __Linear regression__ assumes that the the target is linearly associated with the inputs subject to a constraint. Common examples include *ordinary least squares* (OLS), *ARIMA*, and *Least Absolute Shrinkage and Selection Operator* (LASSO). 
+- __Tree-Based Learning__ partition samples into smaller and smaller more homogeneous subsamples -- basically a combination of characteristics define a cell of observations that take on an average value of the outcome. Common examples include *regression trees* and *random forests*. 
+
+Each methods has its own assumptions as well as strengths and weaknesses.
+
+```{r, echo = FALSE, warning=FALSE, message = FALSE, fig.height = 6}
+
+#Set up random Data
+  y <- sin((1:100)/4)/2 + (1:100)*0.05 + runif(100)
+  df <- data.frame(y, x = 1:100, m = 1:100 %% 28)
+  
+#Plot
+  par(mfrow = c(2,2))
+  
+  #Base example
+  plot(df$y, col = "orange", pch = 16, ylab = "y", xlab = "time", main = "(1) Raw Data")
+  lines(df$y, col = "orange")
+  
+  #OLS
+  plot(df$y, col = "orange", pch = 16, ylab = "y", xlab = "time", main = "(2) OLS")
+  lines(predict(lm(y ~ x, data = df)), col = "blue")
+  
+  #Rpart
+  library(rpart)
+  plot(df$y, col = "orange", pch = 16, ylab = "y", xlab = "time", main = "(3) Regression Tree")
+  lines(predict(rpart(y ~ x, data = df, cp = 0)), col = "blue")
+  
+  #Random Forest
+  library(randomForest)
+  plot(df$y, col = "orange", pch = 16, ylab = "y", xlab = "time", main = "(4) Random Forest")
+  lines(predict(randomForest(y ~ x, data = df)), col = "blue")
+  
+```
+
+### A quick word about time series
+
+In time series, certain behaviors are expected of the data. In particular, we want to see data that are *stationary* -- or data in which the mean, variance and autocorrelation are constant over time. In other words, if we can ensure that the  statistical properties of the data are "tame" and predictable, any paradigm we identify through modeling is generalizable. The series should not be floating off to oblivion uncontrollably,  but rather should stay relatively stable wthin certain bounds.
+
+
+```{r, fig.height = 3,  warning = FALSE, message = FALSE, echo = FALSE}
+#Create synthetic series
+  y <- (5*sin(1:100) + runif(100)*5 + (1:100)^2)
+
+#Plot
+  par(mfrow = c(1,3))
+
+#Plot data
+  plot(y, type = "l", ylab = "y", col = "blue", main = "(1) Non-Stationary")
+  plot(diff(y), type = "l", ylab = "y", col = "blue", main = "(2) Differenced - Stationary")
+  plot(diff(diff(y)), type = "l", ylab = "y", col = "blue", main = "(3) 2nd Difference - Stationary")
+
+```
+
+### Testing for stationarity
+
+Check the *autocorrelation function* and *partial autocorrelation function*. The lags should drop off quickly if the series is stationary. Easy way to turn a non-stationary series into stationary is to take the difference using `diff()`. 
+
+__TRY THIS__
+```{r, }
+#Create synthetic series
+  y <- (5*sin(1:100) + runif(100)*5 + (1:100)^2)
+
+#Plot
+  par(mfrow = c(2,3))
+
+#Autocorrelation Function
+  acf(y);
+  acf(diff(y))
+  acf(diff(diff(y)))
+
+
+#Partial Autocorrelation Function
+  pacf(y)
+  pacf(diff(y))
+  pacf(diff(diff(y)))
+```
+
+### Testing for stationarity: ADF 
+
+Then also the Augmented Dickey Fuller test that tests for unit roots where the null hypothesis is that there is a presence of a unit root.
+
+```{r}
+  library(tseries)
+  adf.test(y)
+  adf.test(diff(y))
+  adf.test(diff(diff(y)))
+```
+
+### Time Series Tips
+
+- Testing for autocorrelation matters when dealing with models in which we intended to regress the series against itself (e.g. ARIMA)
+- Spurious correlation in levels often times will overstate strength of relationships. Differencing will provide a clearer gauge of modeled relationships by removing the momentum that is embedded in variables 
+
+### Model formation
+
+- Contemporaneous: $y_t = f(x_t)$
+- Time series/Momentum: $y_t = f(y_{t-1}, x_{t-1})$
+
+### Linear Regression - Contemporaneous
+
+OLS regression is the quantitative workhorse in most fields. The technique is a statistical method that estimates unknown parameters by minimizing the sum of squared differences between the observed values and predicted values of the target variable. To better understand arguably the most commonly used supervised learning method, we can start by defining a regression formula:
+
+$$y_i = \beta_0 x_{i,0} + \beta_{1} x_{i,1} + ... + \beta_{k} \beta_{i,k} + \epsilon_{i}$$
+
+where:
+
+- $y_i$ is the target variable or "observed response"
+- $\beta_{k}$ are coefficients associated with each $x_k$. Each coefficient can be obtained by solving $\hat{\beta} = (X'X)^{-1}X'Y$. Note that $w$ may be substituted with $\beta$ in some cases. 
+- $x_{i,k}$ are input or independent variables 
+- subscript $i$ indicates the index of individual observations in the data set
+- $k$ is an index of position of a variable in a matrix of $x$
+- $\epsilon_{i}$ is an error term that is assumed to have a normal distribution of $\mu = 0$ and constant variance $\sigma^2$
+
+
+*Running a linear model* is simple using the `lm()` function regressing $growth = f(ces1, google1)$. After doig so, we can extract the coefficients to interpret the relationships. 
+
+```{r}
+#Estimate model
+  fit <- lm(growth ~ ces1 + google1, data = short)
+
+#Interpret
+  summary(fit)
+```
+
+And prediction is simple enough, requiring the `fit` object and dataset to which the linear model is applied.  
+
+
+```{r}
+#Predict 
+  yhat <- predict(fit, short)
+  
+#Check
+  plot(short$growth, type = "l")
+  lines(yhat, col = "red")
+```
+
+The challenge with any plain linear regression is its inability to accommodate scenarios where there are more $k > n$. First, linear regression does not yield an invertible solution when there are more variables than records. Secondly, one might not be able to manually test all specifications. 
+
+##LASSO
+
+```{r}
+
+ #Overfit for GLMNET and plot
+  library(glmnet)
+  fit <- cv.glmnet(x, y, alpha = 1)
+  
+  coef.cv.glmnet(fit, s = "lambda.min" )
+  
+  yhat_1 <- predict(fit, x, s = "lambda.min")
+  
+  plot(y, pch = 16, col = "darkgrey")
+  lines(y, col = "darkgrey", lty = "dashed")
+  lines(yhat_1, col = "red")
+  
+  
+```
+
+##ARIMA 
+```{r}
+ #Create time series object
+    qss <- ts(short[,3:ncol(short)], start = c(2004,3), frequency = 4)
+    
+  #ARIMA
+  # Assumes regularity and momentum
+  # Stationary processes
+  # Linearity
+    library(forecast)
+    fit <- auto.arima(y = qss[,1], 
+                      seasonal = TRUE)
+    
+    #Apply regression model to out-of-sample set
+    out <- forecast(fit)
+    plot(out)
+
+```
+
+## Tree-Based Methods
+
+
+
+# Model Validation
+
+```{r}
+  #MODEL VALIDATION
+  
+  #Example of overconfidence
+  #Cut out data
+  y <- short$growth
+  x <- as.matrix(short[,4:ncol(short)])
+  
+  #Plot for example
+  plot(y, pch = 16, col = "darkgrey")
+  lines(y, col = "darkgrey")
+  
+  #Overfit for GLMNET and plot
+  library(glmnet)
+  fit <- cv.glmnet(x, y, alpha = 1)
+  
+  coef.cv.glmnet(fit, s = "lambda.min" )
+  
+  yhat_1 <- predict(fit, x, s = "lambda.min")
+  
+  plot(y, pch = 16, col = "darkgrey")
+  lines(y, col = "darkgrey", lty = "dashed")
+  lines(yhat_1, col = "red")
+  
+  #Example 1: Train/Test
+  test.start <- 15
+  fit <- cv.glmnet(x[1:(test.start-1),], y[1:(test.start-1)], alpha = 1)
+  
+  coef.cv.glmnet(fit, s = "lambda.min" )
+  
+  yhat_2 <- predict(fit, x, s = "lambda.min")
+  plot(short$growth, type = "l", lty = "dashed")
+  lines(yhat_1, col = "red")
+  lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "blue")
+  
+  plot(y, pch = 16, col = "darkgrey")
+  lines(y, col = "darkgrey", lty = "dashed")
+  lines(yhat_1, col = "red")
+  lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "blue")
+  
+  #Example 2: One Step Ahead (Chaining)
+  
+  yhat_3 <- yhat_2
+  
+  for(i in test.start:length(y)){
+    fit <- cv.glmnet(x[1:(test.start-1),], y[1:(test.start-1)], alpha = 1)
+    
+    temp <- predict(fit,x, s = "lambda.min")
+    yhat_3[i] <- temp[i]
+  }
+  
+  lines(yhat_1, col = "red")
+  lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "blue")
+  
+  plot(y, pch = 16, col = "darkgrey")
+  lines(y, col = "darkgrey", lty = "dashed")
+  # lines(yhat_1, col = "red")
+  lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "lightblue")
+  lines(c(rep(NA, (test.start-1)),yhat_3[test.start:length(y)]), col = "green")
+  
+  sqrt(mean((yhat_2-y)^2, na.rm = T))
+  sqrt(mean((yhat_3-y)^2, na.rm = T))
+  
+  
+  
+#ALGORITHMS
+
+ 
+  #GLMNET
+    library(glmnet)
+    
+    #LASSO
+    fit <- cv.glmnet(x = as.matrix(qss[,-1]), 
+                     y = as.vector(qss[,1]), 
+                     alpha = 1)
+    coef.cv.glmnet(fit, s = "lambda.min" )
+    plot(fit)
+    
+  #Decision Trees
+
+    library(rpart)
+    fit <- rpart(growth ~., data = qss, cp = 0)
+    printcp(fit)
+    
+    #Choose best
+    best <- which(fit$cptable[,4] == min(fit$cptable[,4]))
+    best.cp <- fit$cptable[best,1]
+    fit <- rpart(growth ~., data = qss, cp = best.cp)
+    
+    yhat_dt <- predict(fit, qss)
+    yhat_dt <- ts(yhat_dt , start = c(2004,2), frequency = 2)
+    
+  #Random Forests
+    library(randomForest)
+
+```
