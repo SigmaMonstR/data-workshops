@@ -121,7 +121,7 @@ Each methods has its own assumptions as well as strengths and weaknesses.
 In time series, certain behaviors are expected of the data. In particular, we want to see data that are *stationary* -- or data in which the mean, variance and autocorrelation are constant over time. In other words, if we can ensure that the  statistical properties of the data are "tame" and predictable, any paradigm we identify through modeling is generalizable. The series should not be floating off to oblivion uncontrollably,  but rather should stay relatively stable wthin certain bounds.
 
 
-```{r, fig.height = 3,  warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 #Create synthetic series
   y <- (5*sin(1:100) + runif(100)*5 + (1:100)^2)
 
@@ -145,7 +145,7 @@ __TRY THIS__
   y <- (5*sin(1:100) + runif(100)*5 + (1:100)^2)
 
 #Plot
-  par(mfrow = c(2,3))
+  par(mfrow = c(2,3), oma = c(1,1,1,1))
 
 #Autocorrelation Function
   acf(y);
@@ -195,16 +195,36 @@ where:
 - $k$ is an index of position of a variable in a matrix of $x$
 - $\epsilon_{i}$ is an error term that is assumed to have a normal distribution of $\mu = 0$ and constant variance $\sigma^2$
 
+Note that $x_{i,0} = 1$, thus $w_0$ is often times represented on its own. For parsimony, this formula can be rewritten in matrix notation as follows:
+
+$$y = X\beta + \epsilon$$
+such that $y$ is a vector of dimensions $n \times 1$, $X$ is a matrix with dimensions $n \times k$ regressors, and $W$ is a vector of coefficients of length $k$, containing an intercept and a coefficient corresponding to each of $k$ features. $\beta$ is oftem times represented with $\beta$.
+
+$$TSS = argmin (\sum^n_{i=1}(y_i - \sum^k_{j=1} x_{ij}\beta_j)^2$$
+
+
+Given this formula, the objective is to minimize the Total Sum of Squares (also known as Sum of Squared Errors):
+
+$$TSS = \sum_{i=0}^{n}{(y_i - \hat{y}_i)^2} $$
+Which can also be written by substituting the prediction formula that yields $\hat{y}$:
+
+$$TSS = \sum^n_{i=1}(y_i - \sum^k_{j=1} x_{ij}w_j)^2$$
+
+where $k$ is the total number of variables and $j \in k$. More commonly, TSS is better contextualized as the Mean Squared Error $$MSE = \frac{1}{n}\sum_{i}^{n}{(y_i - \hat{y_i})^2}$$. The SSE and MSE are measures of uncertainty relative to the observed response. Minimization of least squares can be achieved through a a method known as *gradient descent*.
+
 
 *Running a linear model* is simple using the `lm()` function regressing $growth = f(ces1, google1)$. After doig so, we can extract the coefficients to interpret the relationships. 
 
+
 ```{r}
+#TRY RUNNING THIS and SUBSTITUTE VARIABLES IN
 #Estimate model
   fit <- lm(growth ~ ces1 + google1, data = short)
 
 #Interpret
   summary(fit)
 ```
+
 
 And prediction is simple enough, requiring the `fit` object and dataset to which the linear model is applied.  
 
@@ -218,35 +238,88 @@ And prediction is simple enough, requiring the `fit` object and dataset to which
   lines(yhat, col = "red")
 ```
 
-The challenge with any plain linear regression is its inability to accommodate scenarios where there are more $k > n$. First, linear regression does not yield an invertible solution when there are more variables than records. Secondly, one might not be able to manually test all specifications. 
+To calculate accuracy, we can write out the formula for RMSE:
+
+```{r}
+  sqrt(mean((yhat - short$growth)^2))
+
+```
+
+The challenge with any plain linear regression is its inability to accommodate scenarios where there are more $k > n$. Also note that there many basic assumptions that determine whether an estimated model is valid -- thus OLS is easy to estimate, but hard to meet the assumptions. For example, linear regression does not yield an invertible solution when there are more variables than records. Secondly, one might not be able to manually test all specifications. 
 
 ##LASSO
+ 
+One way to deal with cases where $k > n$ is using *regularized regression*. As we know with linear regression, the goal is to estimate $\beta$ by minimizing the Total Sum of Squares (TSS):
+
+$$\hat{w} = (X'X)^{-1}X'Y$$
+
+where each $X$ and $Y$ is standardized (mean 0 with unit variance). If we assume that there is a limited amount of TSS, then we can force linear regression to make trade offs between coefficients by introducing a _bias_ term -- a constraint $\lambda I_k$ can be added to the diagonals of $X'X$:
+
+$$\hat{w} = (X'X + \lambda I_k)^{-1}X'Y$$.
+
+$\lambda$ is a tuning parameter -- a value that cannot be solved for and must be uncovered through cross-validation. Depending on how much bias is added into the model determines how much "wiggle room" coefficients have to move. Expanding upon the typical TSS, $\lambda$ is tacked onto the end of the formula as a scalar of the sum of squared coefficients (an _L2-norm_):  
+
+
+$$TSS_{penalized} = \sum^n_{i=1}(y_i - \sum^k_{j=1} x_{ij}w_j)^2 + \lambda \sum^k_{j=1}|w_j|^2$$
+
+The second part of the penalized TSS can be viewed as a constraint. Given the standard TSS $\sum^n_{i=1}(y_i - \sum^k_{j=1} x_{ij}w_j)^2$, we place a constraint such that $$\sum^k_{j=1}|w_j|^2 < c $$
+
+where $c > 0$. Taken together, the interpretation of $\lambda$ is that it regulates the size of coefficients $w$: As the size $\lambda$ is increased, the magnitude of coefficients are reduced.  The value of $\lambda$ is determined through a _grid search_ in which values of $\lambda$ are tested at equal intervals to identify the value that minimizes some error measure such as MSE. This specific formulation of a regularization is known as a _ridge regression_ and helps to bound coefficients to a "reasonable" range, but does not zero out coefficient values. 
+
+In order to surface the most "influential" features, we may rely on a close cousin of ridge regression known as _Least Absolute Shrinkage and Selection Operator_ or _LASSO_, which relies on an _L1-norm_:
+$$\sum^k_{j=1}|w_j| < c$$. By swapping a L2-quadratic constraint with a L1, least squares will behave differently.
+
+
+*Run a LASSO*. 
+
+All data needs to be in vector or matrix form.
 
 ```{r}
 
  #Overfit for GLMNET and plot
   library(glmnet)
+
+ #Set up data in matrix form
+  x <- as.matrix(short[,4:ncol(short)])
+  y <- short$growth
+```
+
+`cv.glmnet` will find the value of lambda for you by running the model 100 different times. The value of alpha controls whether LASSO is used (1) or Ridge is used (0). Remember that LASSO will conduct variable selection and 'zero out' noisy variables, but Ridge is robust to collinearity.
+
+```{r}
+ #Model
   fit <- cv.glmnet(x, y, alpha = 1)
   
+```
+
+We can find the optimal lambda by plotting the model object
+```{r}
+ plot(fit)
+```
+
+And also take a peek at the coefficients of the best model
+```{r, echo = FALSE}
   coef.cv.glmnet(fit, s = "lambda.min" )
-  
+```
+
+And predict values of $y$.
+```{r}
   yhat_1 <- predict(fit, x, s = "lambda.min")
   
   plot(y, pch = 16, col = "darkgrey")
   lines(y, col = "darkgrey", lty = "dashed")
   lines(yhat_1, col = "red")
-  
-  
 ```
 
 ##ARIMA 
+
+Lastly, ARIMA does not need much introduction, other than it is a linear model that is built on lags of past values. Thus, ARIMA carries momentum and seasonal patterns forward.
+
 ```{r}
  #Create time series object
     qss <- ts(short[,3:ncol(short)], start = c(2004,3), frequency = 4)
     
   #ARIMA
-  # Assumes regularity and momentum
-  # Stationary processes
   # Linearity
     library(forecast)
     fit <- auto.arima(y = qss[,1], 
@@ -254,19 +327,111 @@ The challenge with any plain linear regression is its inability to accommodate s
     
     #Apply regression model to out-of-sample set
     out <- forecast(fit)
-    plot(out)
+    plot(out, main = "ARIMA forecast")
 
 ```
 
 ## Tree-Based Methods
 
+Tree-based methods are not like regression. They don't have natural probabilistic properties and are considerd to be *non-parametric*
 
+### Regression Trees
+
+Trees are built following this algorithmic logic:
+
+```
+  1. Let Sample = S, Target = Y, Input Features = X
+  2. Screen records for cases that meet termination criteria.
+        If each base case that is met, partition sample to isolate homogeneous cases.
+  3. For each X:
+        Calculate the attribute test comparing all X's and Y
+  4. Compare and identify Xi that yields the greatest separability
+  5. Split S using input feature that maximizes separability
+  6. Iterate process on steps 3 through 5 until termination criteria is met
+```
+
+The result is a set of conditions and inequalities that describe small subsamples of S where the target $Y$ is more homogeneous. If one follows the algorithmic logic all the way through, you will wonder how does the tree know how to stop? A tree that is fully grown will have terminal nodes (leafs) with one observation -- it might be overly complex. The tree can be *pruned* to ensure that the splits are meaningful.
+
+```{r, message = FALSE, warning = FALSE}
+  
+#Rpart
+  library(rpart)
+  library(rpart.plot)
+
+#Plot!
+  par(mfrow = c(1,2))
+  fit <- rpart(y ~ x, data = df, cp = 0)
+  rpart.plot(fit, main = "Max complexity")
+  
+  fit <- rpart(y ~ x, data = df, cp = 0.1)
+  rpart.plot(fit, main = "Pruned")
+```
+
+To prune the tree, we can first estimate the model at full complexity $cp = 0$, then take a look at the complexity table. We would like to keep the $cp$ value that corresponds with the lowest `xerror` (cross validation error).
+
+```{r, message = FALSE, warning = FALSE}
+  
+#Rpart
+  set.seed(123)
+  fit <- rpart(y ~ x, data = df, cp = 0)
+  printcp(fit)
+  
+#Choose lowest cp
+  min.cp <- fit$cptable[which(fit$cptable[,4] == min(fit$cptable[,4]))[1],1]
+  
+#Re-estimate model
+  fit <- rpart(y ~ x, data = df, cp = min.cp)
+  yhat_dt <- predict(fit, x)
+```
+
+While trees conduct variable selection, there are issues with decision trees: 
+
+- They tend to overfit and produce noisy estimates
+- The algorithm will crash if there are missing right-hand side values
+- Predictions are jagged
+
+### Random Forest
+
+Random Forests are much of the same, except using hundreds of trees with a twist. The technique, as crystallized in Breiman (2001), is an extension of decision trees using a modified form of bootstrapping and ensemble methods to mitigate overfitting and bias issues. Not only are individual records bootstrapped, but input features are bootstrapped such that if $K$ variables are in the training set, then $k$ variables are randomly selected to be considered in a model such that $k < K$. Each bootstrap sample is exhaustively grown using decision tree learning and is left as an unpruned tree. The resulting predictions of hundreds of trees are ensembled. The logic is described below.
+
+__Pseudo-code__
+```
+Let S = training sample, K = number of input features
+  1. Randomly sample S cases with replacement from the original data.
+  2. Given K features, select k features at random where k < K.
+  3. With a sample of s and k features, grow the tree to its fullest complexity.
+  4. Predict the outcome for all records.
+  5. Out-Of-Bag (OOB). Set aside the predictions for records not in the s cases.
+Repeat steps 1 through 5 for a large number of times saving the result after each tree.
+Vote and average the results of the tree to obtain predictions. 
+Calculate OOB error using the stored OOB predictions. 
+```
+
+The *Out-Of-Bag* (OOB) sample is a natural artifact of bootstrapping: approximately one-third of observations are naturally left un-selected, which can be used as the basis of calculating each tree's error and the overall model error. Think of it as a convenient built in test sample.
+
+
+```{r, message = FALSE, warning = FALSE}
+  #Random Forest
+  library(randomForest)
+  fit.tune <- tuneRF(x = short[,4:ncol(short)], y =  short[,3], ntreeTry = 500, 
+                   mtryStart = 1, stepFactor = 2, 
+                   improve = 0.001, plot = TRUE)
+  opt.try <- fit.tune[fit.tune[,2] == min(fit.tune[,2]), 1]
+  fit <- randomForest(growth ~ . , 
+               data = short,
+               mtry = opt.try)
+  
+```
 
 # Model Validation
 
+How do we know that what we're dealing with is accurate? In a classroom, we would never trust test scores if students already had seen the exam answer key, would we? Same applies to prediction. Model validation is a way to check our answers. 
+
+
+### Overfitting example
+
+Hammering in the point
 ```{r}
-  #MODEL VALIDATION
-  
   #Example of overconfidence
   #Cut out data
   y <- short$growth
@@ -279,84 +444,76 @@ The challenge with any plain linear regression is its inability to accommodate s
   #Overfit for GLMNET and plot
   library(glmnet)
   fit <- cv.glmnet(x, y, alpha = 1)
-  
-  coef.cv.glmnet(fit, s = "lambda.min" )
-  
   yhat_1 <- predict(fit, x, s = "lambda.min")
   
+  #Looks too good to be true, right?
   plot(y, pch = 16, col = "darkgrey")
   lines(y, col = "darkgrey", lty = "dashed")
   lines(yhat_1, col = "red")
-  
+```
+
+##Train-Test design
+
+One way to get around it is to split the sample into two or more pieces, train the algorithm on one part and use the other part as an out of sample test. Notice that the test error is much larger than the train? This indicates that the patterns that an algorithm can learn over time may change.
+```{r}
   #Example 1: Train/Test
   test.start <- 15
   fit <- cv.glmnet(x[1:(test.start-1),], y[1:(test.start-1)], alpha = 1)
   
-  coef.cv.glmnet(fit, s = "lambda.min" )
-  
+  #Predict
   yhat_2 <- predict(fit, x, s = "lambda.min")
+  
+  #Calculate RMSE
+  sqrt(mean((yhat_2[1:(test.start-1)] - y[1:(test.start-1)])^2))
+  sqrt(mean((yhat_2[(test.start):length(y)] - y[(test.start):length(y)])^2))
+```
+
+Compare overfit with testing
+```{r}
+  #Plot
   plot(short$growth, type = "l", lty = "dashed")
   lines(yhat_1, col = "red")
   lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "blue")
-  
+```
+
+Compare in-sample vs out-of-sample
+```{r}
+
   plot(y, pch = 16, col = "darkgrey")
   lines(y, col = "darkgrey", lty = "dashed")
   lines(yhat_1, col = "red")
   lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "blue")
-  
-  #Example 2: One Step Ahead (Chaining)
-  
+```
+
+
+##One Step Ahead
+
+Problem with train/test: you will lose a lot of observations for testing. Also, for time series where the pattern changes constantly and for small samples, by blocking out a large chunk for testing is likely to take a lot of statistical power from measuring accuracy.
+
+One step ahead validation means each observation is treated as a test, meaning that if there are $n$ test samples that there are $n$ models that need to be run.
+
+
+```{r}
+
+#Create a placeholder vector
   yhat_3 <- yhat_2
   
+#Loop through each test observation, run a model
   for(i in test.start:length(y)){
     fit <- cv.glmnet(x[1:(test.start-1),], y[1:(test.start-1)], alpha = 1)
-    
     temp <- predict(fit,x, s = "lambda.min")
     yhat_3[i] <- temp[i]
   }
   
-  lines(yhat_1, col = "red")
-  lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "blue")
+#Compare train vs test
+  sqrt(mean((yhat_3[1:(test.start-1)] - y[1:(test.start-1)])^2))
+  sqrt(mean((yhat_3[(test.start):length(y)] - y[(test.start):length(y)])^2))
   
+#Plot to see how it went
   plot(y, pch = 16, col = "darkgrey")
   lines(y, col = "darkgrey", lty = "dashed")
   # lines(yhat_1, col = "red")
   lines(c(rep(NA, (test.start-1)),yhat_2[test.start:length(y)]), col = "lightblue")
   lines(c(rep(NA, (test.start-1)),yhat_3[test.start:length(y)]), col = "green")
-  
-  sqrt(mean((yhat_2-y)^2, na.rm = T))
-  sqrt(mean((yhat_3-y)^2, na.rm = T))
-  
-  
-  
-#ALGORITHMS
-
- 
-  #GLMNET
-    library(glmnet)
-    
-    #LASSO
-    fit <- cv.glmnet(x = as.matrix(qss[,-1]), 
-                     y = as.vector(qss[,1]), 
-                     alpha = 1)
-    coef.cv.glmnet(fit, s = "lambda.min" )
-    plot(fit)
-    
-  #Decision Trees
-
-    library(rpart)
-    fit <- rpart(growth ~., data = qss, cp = 0)
-    printcp(fit)
-    
-    #Choose best
-    best <- which(fit$cptable[,4] == min(fit$cptable[,4]))
-    best.cp <- fit$cptable[best,1]
-    fit <- rpart(growth ~., data = qss, cp = best.cp)
-    
-    yhat_dt <- predict(fit, qss)
-    yhat_dt <- ts(yhat_dt , start = c(2004,2), frequency = 2)
-    
-  #Random Forests
-    library(randomForest)
 
 ```
