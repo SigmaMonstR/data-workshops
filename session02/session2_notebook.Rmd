@@ -373,22 +373,33 @@ To prune the tree, we can first estimate the model at full complexity $cp = 0$, 
   
 #Rpart
   set.seed(123)
-  fit <- rpart(y ~ x, data = df, cp = 0)
+  fit <- rpart(growth ~ ., data = short[,3:ncol(short)], cp = 0)
+  yhat_dt0 <- predict(fit, short)
   printcp(fit)
   
 #Choose lowest cp
   min.cp <- fit$cptable[which(fit$cptable[,4] == min(fit$cptable[,4]))[1],1]
-  
-#Re-estimate model
-  fit <- rpart(y ~ x, data = df, cp = min.cp)
-  yhat_dt <- predict(fit, x)
 ```
 
+Now, we can re-estimate the model with the better tuned parameters.
+
+```{r}
+
+#Re-estimate model
+  fit <- rpart(growth ~ .,
+               data = short[,3:ncol(short)], 
+               cp = min.cp)
+  yhat_dtopt <- predict(fit, short)
+  
+#Plot
+  plot(short$growth, type = "l")
+  lines(yhat_dtopt, col = "red")
+```
 While trees conduct variable selection, there are issues with decision trees: 
 
 - They tend to overfit and produce noisy estimates
 - The algorithm will crash if there are missing right-hand side values
-- Predictions are jagged
+- Predictions are not smooth
 
 ### Random Forest
 
@@ -409,18 +420,28 @@ Calculate OOB error using the stored OOB predictions.
 
 The *Out-Of-Bag* (OOB) sample is a natural artifact of bootstrapping: approximately one-third of observations are naturally left un-selected, which can be used as the basis of calculating each tree's error and the overall model error. Think of it as a convenient built in test sample.
 
+*Running the Random Forest* algorithm requires tuning the number of variables per tree and the number of trees. Generally, the number of trees does not impact accuracy of predictions, thus we focus on testing the number of variables through a grid search.
 
 ```{r, message = FALSE, warning = FALSE}
   #Random Forest
   library(randomForest)
-  fit.tune <- tuneRF(x = short[,4:ncol(short)], y =  short[,3], ntreeTry = 500, 
-                   mtryStart = 1, stepFactor = 2, 
-                   improve = 0.001, plot = TRUE)
+  fit.tune <- tuneRF(x = short[,4:ncol(short)], 
+                     y =  short[,3], 
+                     ntreeTry = 500, 
+                     mtryStart = 1, 
+                     stepFactor = 2, 
+                     improve = 0.001, 
+                     plot = TRUE)
+  
+```
+
+Apply the best parameter. Note that tuning is based on the OOB.
+```{r, message = FALSE, warning = FALSE}
   opt.try <- fit.tune[fit.tune[,2] == min(fit.tune[,2]), 1]
   fit <- randomForest(growth ~ . , 
                data = short,
                mtry = opt.try)
-  
+  importance(fit)
 ```
 
 # Model Validation
